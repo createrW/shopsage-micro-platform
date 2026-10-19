@@ -1,0 +1,5 @@
+# Grafana app-plugin provisioning. Present (even empty) because the provisioning bind mount hides
+# the image's own sub-directories and Grafana logs an error for a missing one. The stack only uses
+# the bundled Prometheus and Jaeger datasources, so no plugins are provisioned.
+apiVersion: 1
+apps: []

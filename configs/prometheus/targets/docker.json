@@ -1,0 +1,6 @@
+[
+  {"targets": ["user-service:8081"], "labels": {"service": "user-service", "mode": "docker"}},
+  {"targets": ["inventory-service:8082"], "labels": {"service": "inventory-service", "mode": "docker"}},
+  {"targets": ["order-service:8083"], "labels": {"service": "order-service", "mode": "docker"}},
+  {"targets": ["payment-service:8084"], "labels": {"service": "payment-service", "mode": "docker"}}
+]

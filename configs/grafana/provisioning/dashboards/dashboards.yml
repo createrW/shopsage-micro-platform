@@ -1,0 +1,14 @@
+# Loads dashboard JSON files from configs/grafana/dashboards (mounted at /var/lib/grafana/dashboards).
+# Sub-directories become Grafana folders. Dashboards are code: edit the JSON, not the UI.
+apiVersion: 1
+
+providers:
+  - name: shopsage
+    orgId: 1
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

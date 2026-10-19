@@ -1,0 +1,100 @@
+# Every value that differs between laptop, compose and k8s is an env var with a laptop-friendly default
+# (`./mvnw -pl services/inventory-service spring-boot:run` against ./scripts/dev-up.sh works with no extra setup).
+spring:
+  application:
+    name: inventory-service
+  lifecycle:
+    # Must stay below compose stop_grace_period (30s) and the k8s terminationGracePeriodSeconds.
+    timeout-per-shutdown-phase: 20s
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/shopsage_inventory}
+    username: ${DB_USERNAME:shopsage_inventory}
+    password: ${DB_PASSWORD:shopsage_inventory}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema; Hibernate only checks that entities match it.
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      # Values are the JSON text of the DomainEvent envelope: no Java type headers, no shared producer classes.
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: ${spring.application.name}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # A record that cannot be deserialized becomes a handled error (-> DLT, Day 4) instead of a poison pill.
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+    # Observation on both sides propagates traceparent through Kafka headers, so one Saga is one Jaeger trace.
+    template:
+      observation-enabled: ${KAFKA_OBSERVATION_ENABLED:true}
+    listener:
+      observation-enabled: ${KAFKA_OBSERVATION_ENABLED:true}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      # cache only (RedisTemplate, Day 3); no Redis repositories - avoids strict-repository-mode warnings once JPA repositories exist
+      repositories:
+        enabled: false
+server:
+  port: ${SERVER_PORT:8082}
+  shutdown: graceful
+  tomcat:
+    mbeanregistry:
+      # exports tomcat_threads_*/tomcat_connections_* for the load-test dashboards (Day 7/8)
+      enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    build:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+info:
+  app:
+    name: ${spring.application.name}
+    description: ShopSage inventory service — product catalog, prices and stock reservations
+logging:
+  # traceId/spanId only: Boot's default console pattern already prints the application name, so adding it here
+  # would print it twice (env: LOGGING_PATTERN_CORRELATION).
+  pattern:
+    correlation: "[%X{traceId:-},%X{spanId:-}] "
+  level:
+    com.shopsage: ${LOG_LEVEL:INFO}

@@ -1,0 +1,4 @@
+# Grafana alerting provisioning. Present (even with nothing to provision) because the provisioning
+# bind mount hides the image's own sub-directories and Grafana logs an error for a missing one.
+# TODO(Day 8): alert rules - Saga rollback-success below 99.5 %, DLT growth, consumer lag, p99 > 180 ms.
+apiVersion: 1

@@ -1,0 +1,23 @@
+# Grafana datasources, provisioned at startup. Fixed uids let dashboards (Day 8) and links
+# reference datasources without depending on auto-generated ids.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      # Matches scrape_interval so $__rate_interval never drops below two samples.
+      timeInterval: 5s
+
+  # Jaeger is pinned to 2.20.0 because this datasource still calls the v1 query API (/api/traces).
+  - name: Jaeger
+    uid: jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: false

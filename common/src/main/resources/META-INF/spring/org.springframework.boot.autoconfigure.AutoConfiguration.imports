@@ -1,0 +1,2 @@
+com.shopsage.common.web.CommonWebAutoConfiguration
+com.shopsage.common.observability.ObservabilityAutoConfiguration

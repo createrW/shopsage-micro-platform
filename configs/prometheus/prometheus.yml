@@ -1,0 +1,35 @@
+# Prometheus scrape config for the local stack (mounted read-only into the prometheus container).
+# After editing this file or a targets file run `docker compose up -d --force-recreate prometheus`:
+# both are single-file bind mounts, which never see an editor's atomic (rename) save. The dev-only
+# lifecycle API (`curl -X POST http://localhost:9090/-/reload`) only helps for in-place writes.
+global:
+  # Short interval so a 1-5 minute k6 run still yields enough samples for p99 panels.
+  scrape_interval: 5s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Jaeger v2 internal telemetry (spans received/dropped, exporter queue) - shows when tracing,
+  # not the app, is the bottleneck during load tests.
+  - job_name: jaeger
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["jaeger:8888"]
+
+  # The four Spring Boot services. They run EITHER on the host (./mvnw spring-boot:run) OR in
+  # compose (--profile app), so ONE job reads its targets from a file the compose service mounts as
+  # active.json: targets/host.json (host.docker.internal:808x) or targets/docker.json (<svc>:808x),
+  # selected by PROMETHEUS_TARGETS. One job avoids double counting and a permanently-down twin job.
+  # To change targets: edit host.json/docker.json and recreate the container (see the header comment).
+  - job_name: shopsage-services
+    metrics_path: /actuator/prometheus
+    file_sd_configs:
+      - files: ["/etc/prometheus/targets/active.json"]
+        refresh_interval: 30s
+    relabel_configs:
+      # instance="order-service" instead of "host.docker.internal:8083": stable across modes.
+      - source_labels: [service]
+        target_label: instance

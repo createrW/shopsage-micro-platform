@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Spring Boot 3.2 is pinned on purpose (project constraint). Upgrading is NOT a one-line change: parent,
+         spring-boot.version, spring-cloud.version and the overrides below move together - steps in ADR-0005. -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.12</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.shopsage</groupId>
+    <artifactId>shopsage-platform</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>ShopSage Micro Platform</name>
+    <description>Saga-choreographed e-commerce microservices on Spring Boot, Kafka and PostgreSQL.</description>
+
+    <modules>
+        <module>common</module>
+        <module>services/user-service</module>
+        <module>services/inventory-service</module>
+        <module>services/order-service</module>
+        <module>services/payment-service</module>
+        <!-- TODO(Day 6): services/gateway (Spring Cloud Gateway, port 8080) -->
+    </modules>
+
+    <properties>
+        <java.version>17</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- MUST equal the spring-boot-starter-parent version above. Needed for the configuration-processor
+             annotation-processor path: ${project.parent.version} would resolve to this pom in child modules. -->
+        <spring-boot.version>3.2.12</spring-boot.version>
+
+        <spring-cloud.version>2023.0.6</spring-cloud.version>
+        <!-- Overrides Boot-managed 1.19.8: newer Testcontainers speaks the Docker Engine 29.x API. -->
+        <testcontainers.version>1.21.4</testcontainers.version>
+        <!-- Overrides Boot-managed 9.22.x: Flyway 10 supports PostgreSQL 16 (needs flyway-database-postgresql). -->
+        <flyway.version>10.22.0</flyway.version>
+        <lombok.version>1.18.48</lombok.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
+        <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
+        <jacoco.version>0.8.15</jacoco.version>
+        <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
+
+        <!-- Security overrides of Boot-managed versions: patch bumps for Tomcat, Netty and Spring Framework;
+             minor bumps (newer than Boot 3.2 manages) for Jackson 2.15->2.18, the PostgreSQL driver 42.6->42.7
+             and kafka-clients 3.6->3.9. These avoid Trivy (Day 9) flagging e.g. CVE-2025-24813 (Tomcat 10.1.33,
+             CRITICAL). Each is verified by the smoke ITs (incl. a real Kafka round-trip); drop a single line if it
+             ever breaks and record why in ADR-0005. -->
+        <tomcat.version>10.1.61</tomcat.version>
+        <netty.version>4.1.139.Final</netty.version>
+        <jackson-bom.version>2.18.12</jackson-bom.version>
+        <postgresql.version>42.7.14</postgresql.version>
+        <spring-framework.version>6.1.21</spring-framework.version>
+        <!-- kafka-clients; wire-compatible with the apache/kafka:3.9.2 broker used locally and in tests. -->
+        <kafka.version>3.9.2</kafka.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Imported now so every module agrees on the train; first consumer is the Day 6 gateway. -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.shopsage</groupId>
+                <artifactId>shopsage-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${mapstruct.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct-processor</artifactId>
+                <version>${mapstruct.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-database-postgresql</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok-mapstruct-binding</artifactId>
+                <version>${lombok-mapstruct-binding.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <!-- Stable jar name (target/<artifactId>.jar) so the root Dockerfile can glob services/*/target/*.jar. -->
+        <finalName>${project.artifactId}</finalName>
+
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <!-- Explicit processor path: order matters (Lombok must generate accessors before MapStruct
+                             reads them; the binding wires the two together). -parameters is already set by Boot. -->
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                            <path>
+                                <groupId>org.mapstruct</groupId>
+                                <artifactId>mapstruct-processor</artifactId>
+                                <version>${mapstruct.version}</version>
+                            </path>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok-mapstruct-binding</artifactId>
+                                <version>${lombok-mapstruct-binding.version}</version>
+                            </path>
+                            <path>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-configuration-processor</artifactId>
+                                <version>${spring-boot.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                        <compilerArgs>
+                            <arg>-Amapstruct.defaultComponentModel=spring</arg>
+                            <arg>-Amapstruct.defaultInjectionStrategy=constructor</arg>
+                        </compilerArgs>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>${maven-enforcer-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>enforce-build-environment</id>
+                            <goals>
+                                <goal>enforce</goal>
+                            </goals>
+                            <configuration>
+                                <rules>
+                                    <requireJavaVersion>
+                                        <version>[17,)</version>
+                                    </requireJavaVersion>
+                                    <requireMavenVersion>
+                                        <version>[3.9,)</version>
+                                    </requireMavenVersion>
+                                    <banDuplicatePomDependencyVersions/>
+                                </rules>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <id>prepare-agent</id>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>report</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <!-- Runs *IT classes (failsafe's default includes) in integration-test and fails the build in verify;
+                     those two executions come from spring-boot-starter-parent. Skip deliberately with -DskipITs;
+                     there is no silent "no Docker, skip" path. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                </plugin>
+
+                <!-- build-info feeds /actuator/info (artifact, version, build time). Lombok is compile-time only,
+                     but repackage would otherwise copy the provided-scope jar into BOOT-INF/lib. -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <configuration>
+                        <excludes>
+                            <exclude>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                            </exclude>
+                        </excludes>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>build-info</id>
+                            <goals>
+                                <goal>build-info</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <!-- Only cross-cutting plugins here. Services opt into spring-boot-maven-plugin and failsafe in their own
+             poms, so the common library never becomes a fat jar and needs no skip workarounds. -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

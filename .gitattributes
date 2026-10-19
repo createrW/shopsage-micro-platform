@@ -1,0 +1,17 @@
+# Normalise line endings in the repository; LF everywhere except Windows scripts.
+* text=auto eol=lf
+
+# Windows batch files need CRLF or cmd.exe misparses them.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Shell scripts and the Maven wrapper must stay LF or they fail with "bad interpreter" on Linux/macOS.
+mvnw text eol=lf
+*.sh text eol=lf
+
+# Binary files: never diff or convert.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.jar binary

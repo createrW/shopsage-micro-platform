@@ -1,0 +1,27 @@
+# Build context for the root Dockerfile: only mvnw, .mvn/, pom.xml, common/ and services/ are needed.
+# Patterns are anchored at the context root, so nested matches need a leading **/.
+
+# Build output and VCS
+**/target/
+.git
+.github/
+
+# Secrets and local env
+.env
+.env.*
+
+# IDE / OS / logs
+**/.idea/
+**/.vscode/
+**/*.iml
+**/.DS_Store
+**/*.log
+
+# Non-build directories
+data/
+docs/
+tests/
+scripts/
+deploy/
+configs/
+**/*.md
