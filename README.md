@@ -195,7 +195,7 @@ Kafka clients reconnect to the advertised listener, which defaults to `localhost
 | gateway | 8080 | Day 6 — Spring Cloud Gateway at `services/gateway` |
 | user-service | 8081 | registration, login, JWT issuance (Day 2); HTTP only, no Kafka producer or consumer |
 | inventory-service | 8082 | catalog, prices, stock reservations, Redis cache (Day 3) |
-| order-service | 8083 | order lifecycle, Saga state machine, simulated shipping (Day 5) |
+| order-service | 8083 | order lifecycle (`POST /api/v1/orders` on Day 4), Saga state machine, simulated shipping (Day 5) |
 | payment-service | 8084 | mock payment provider, capture / refund (Day 5) |
 | postgres | 5432 | one instance, databases `shopsage_user`, `shopsage_inventory`, `shopsage_order`, `shopsage_payment` |
 | redis | 6379 | cache only, no persistence |
@@ -245,6 +245,8 @@ shopsage-micro-platform/
 ├── docker-compose.yml  .env.example
 ├── .gitignore  .gitattributes  .editorconfig
 ├── LICENSE
+├── plan.md  plan.zh-CN.md       # status, day-by-day plan, optional cloud deployment (English / 简体中文)
+├── memory.md  memory.zh-CN.md   # handoff notes: what exists, decisions to keep, how to resume
 └── README.md
 ```
 
@@ -301,17 +303,20 @@ each of its folders maps onto a Maven monorepo.
 
 ## Roadmap
 
+Day-by-day scope, acceptance criteria and the optional cloud deployment: [plan.md](plan.md)
+([简体中文](plan.zh-CN.md)). Handoff notes: [memory.md](memory.md) ([简体中文](memory.zh-CN.md)).
+
 - [x] **Day 1 (2026-10-18)** — Maven monorepo (parent, `common`, four services), Docker Compose infrastructure, Kafka topics, Prometheus/Grafana/Jaeger wiring, Testcontainers smoke tests, design docs and ADRs
 - [ ] **Day 2** — user-service: registration, login, JWT issuance, Spring Security
 - [ ] **Day 3** — inventory-service: catalog and prices, stock, Redis write-through cache, seed data in `data/samples/`
-- [ ] **Day 4** — messaging backbone: transactional outbox + relay, idempotent consumers, retries and dead-letter topics
+- [ ] **Day 4** — order-service `POST /api/v1/orders` as the first outbox producer; messaging backbone: transactional outbox + relay, idempotent consumers, retries and dead-letter topics
 - [ ] **Day 5** — Saga end to end: order-service state machine and timeout sweeper, payment-service, compensations
 - [ ] **Day 6** — `services/gateway`: routing, JWT validation, Redis rate limiting
 - [ ] **Day 7** — k6 load tests and Toxiproxy chaos tests; first measured headline numbers
 - [ ] **Day 8** — observability: Grafana dashboards, trace sampling preset for load runs, Jaeger tuning
-- [ ] **Day 9** — GitHub Actions CI, multi-arch image builds, Trivy scanning
-- [ ] **Day 10** — Helm chart in `deploy/helm/shopsage`, minikube; optional Oracle Cloud OKE (ARM)
-- [ ] **Day 11** — final benchmark and chaos runs, results write-up, trade-offs
+- [ ] **Day 9** — GitHub Actions CI, multi-arch images pushed to GHCR, Trivy scanning, Dependabot
+- [ ] **Day 10** — Helm chart in `deploy/helm/shopsage`, minikube; optional Oracle Cloud OKE (ARM), steps in [plan.md §5](plan.md#5-cloud-deployment-plan-optional-follows-the-hosting-plan)
+- [ ] **Day 11** — final benchmark and chaos runs, results write-up, trade-offs, demo GIF and 2-minute video
 
 ## Benchmarks
 

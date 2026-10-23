@@ -114,7 +114,7 @@ no Kafka producer or consumer.
 |---|---|---|---|---|---|
 | user-service | 8081 | `com.shopsage.user` | `shopsage_user` | accounts, password hashes, JWT issuance; HTTP only, no Kafka producer/consumer | Day 2 |
 | inventory-service | 8082 | `com.shopsage.inventory` | `shopsage_inventory` + Redis | catalog, **prices**, stock, reservations | Day 3 |
-| order-service | 8083 | `com.shopsage.order` | `shopsage_order` | orders, Saga state machine, timeout sweeper, simulated shipping | Day 5 |
+| order-service | 8083 | `com.shopsage.order` | `shopsage_order` | orders, Saga state machine, timeout sweeper, simulated shipping | Day 4 (`POST`, outbox), Day 5 (Saga) |
 | payment-service | 8084 | `com.shopsage.payment` | `shopsage_payment` | payments (mock provider), captures, refunds | Day 5 |
 | gateway | 8080 | — | Redis (rate limits) | routing, JWT validation, `X-User-Id` propagation, rate limiting | Day 6 |
 | common (library) | — | `com.shopsage.common` | — | event envelope, topic names, RFC 7807 error handling, actuator observation filter | Day 1 |
@@ -299,7 +299,7 @@ deployed independently, and a malformed record becomes a handled error instead o
 convention is `eventType` = topic name; the field exists so a topic can later carry more than one type without a format change.
 Evolution rule: additive changes keep `schemaVersion`; a breaking change bumps it and consumers accept N and N-1 during rollout.
 
-### 5.3 Payloads (design, Day 5)
+### 5.3 Payloads (design; `order.created` on Day 4, the rest on Day 5)
 
 | Event | Payload |
 |---|---|
@@ -580,7 +580,7 @@ documented values in `.env.example`.
 |---|---|---|
 | Local | `docker-compose.yml` (project `shopsage`): default profile = postgres, redis, kafka, kafka-init, prometheus, grafana, jaeger; `tools` = kafka-ui; `app` = the four services built from the root Dockerfile. `depends_on`: every service waits for postgres and jaeger healthy; inventory, order and payment also wait for kafka healthy and kafka-init completed (inventory also for redis); user-service, being HTTP-only, does not wait for Kafka | Day 1 |
 | Kubernetes (minikube) | Helm chart `deploy/helm/shopsage/`, values per environment in `configs/deploy/` (`values-minikube.yaml`, `values-oke.yaml`) | Day 10 |
-| Oracle Cloud OKE (optional) | same chart on the always-free Ampere A1 (ARM) worker capacity | optional, after Day 10 |
+| Oracle Cloud OKE (optional) | same chart on the always-free Ampere A1 (ARM) worker capacity; steps C0-C6 in [`plan.md` §5](../plan.md#5-cloud-deployment-plan-optional-follows-the-hosting-plan) | optional, after Day 10 |
 
 - **Images.** One root `Dockerfile`: a build stage on `eclipse-temurin:17-jdk-noble` running `./mvnw` once for all
   modules (`--platform=$BUILDPLATFORM`, so Maven runs natively during multi-arch builds) and extracting Boot layers per
@@ -622,6 +622,7 @@ shopsage-micro-platform/
 ├── tests/load/  tests/chaos/    # system-level tests (Day 7)
 ├── scripts/                     # dev-up.sh, dev-down.sh, dev-env.sh
 ├── Dockerfile  .dockerignore  docker-compose.yml  .env.example
+├── plan.md  plan.zh-CN.md  memory.md  memory.zh-CN.md   # status, plan and handoff notes (English / 简体中文)
 └── .gitignore  .gitattributes  .editorconfig  LICENSE  README.md
 ```
 

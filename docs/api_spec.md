@@ -42,7 +42,7 @@ TODO(Day 2): request/response bodies, password policy and token lifetime.
 
 TODO(Day 3): product and reservation schemas; `PUT .../stock` semantics (absolute value vs delta) and concurrency control.
 
-## order-service (`:8083`) — Day 5
+## order-service (`:8083`) — `POST` on Day 4, reads on Day 5
 
 | Method | Path | Auth | Success | Description |
 |---|---|---|---|---|
@@ -123,6 +123,6 @@ Every error is an RFC 7807 `ProblemDetail` (`application/problem+json`), produce
 | `urn:shopsage:problem:rate-limited` | 429 + `Retry-After` | gateway rate limiter (Day 6) |
 | `about:blank` | 400 / 404 / 405 / 415 / 500 | framework errors (malformed JSON, unknown route, wrong method, unsupported media type) and unexpected server errors; a 500 never echoes the exception message |
 | `urn:shopsage:problem:unauthorized` / `urn:shopsage:problem:forbidden` (Day 2) | 401 / 403 | missing or invalid token / insufficient role — produced by each service's Spring Security resource-server chain (and by the gateway for 401 from Day 6) |
-| (Day 5) | 422 | `Idempotency-Key` reused with a different body |
+| (Day 4) | 422 | `Idempotency-Key` reused with a different body |
 
-TODO(Day 5): the `type` URN for the 422 idempotency conflict.
+TODO(Day 4): the `type` URN for the 422 idempotency conflict.

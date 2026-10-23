@@ -1,6 +1,6 @@
 # ADR-0003: Messaging contract, price authority and idempotency
 
-- **Status:** Accepted (2026-10-18); outbox and dedupe Day 4, payloads Day 5
+- **Status:** Accepted (2026-10-18); outbox, dedupe and `order.created` Day 4, other payloads Day 5
 - **Deciders:** Yi Zhao
 
 ## Context
